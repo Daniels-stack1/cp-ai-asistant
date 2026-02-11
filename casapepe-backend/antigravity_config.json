@@ -1,0 +1,39 @@
+{
+  "project_name": "casapepe-backend",
+  "mcpServers": {
+    "airtable": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-airtable"
+      ],
+      "env": {
+        "AIRTABLE_API_KEY": "YOUR_AIRTABLE_API_KEY_HERE",
+        "AIRTABLE_BASE_ID": "appvUbpjpB7O8XJIk"
+      }
+    }
+  },
+  "agents": [
+    {
+      "name": "consulta_restaurante",
+      "path": "agents/consulta_restaurante.py",
+      "capabilities": [
+        "airtable_search"
+      ]
+    },
+    {
+      "name": "recommender_agent",
+      "path": "agents/recommender_agent.py",
+      "capabilities": [
+        "notebooklm_rag"
+      ]
+    },
+    {
+      "name": "visita_agent",
+      "path": "agents/visita_agent.py",
+      "capabilities": [
+        "airtable_write"
+      ]
+    }
+  ]
+}

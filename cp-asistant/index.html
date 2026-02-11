@@ -1,0 +1,1162 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Casa Pepe Assistant</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,600;1,600&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        cp: {
+                            primary: '#9B2C2C',
+                            light: '#C53030',
+                            accent: '#D69E2E',
+                            dark: '#1C1917',
+                        },
+                        stone: {
+                            50: '#FAFAF9',
+                            100: '#F5F5F4',
+                            200: '#E7E5E4',
+                            300: '#D6D3D1',
+                            800: '#292524',
+                            900: '#1C1917',
+                        }
+                    },
+                    fontFamily: {
+                        display: ['"Playfair Display"', 'serif'],
+                        body: ['"Inter"', 'sans-serif'],
+                        mono: ['"JetBrains Mono"', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #FAFAF9;
+            color: #1C1917;
+        }
+
+        .font-display {
+            font-family: 'Playfair Display', serif;
+        }
+
+        .font-mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #D6D3D1;
+            border-radius: 4px;
+        }
+
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(231, 229, 228, 0.6);
+        }
+
+        .fade-in {
+            animation: fadeIn 0.3s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .pulse-soft {
+            animation: pulseSoft 2s infinite;
+        }
+
+        @keyframes pulseSoft {
+            0% {
+                box-shadow: 0 0 0 0 rgba(214, 158, 46, 0.4);
+            }
+
+            70% {
+                box-shadow: 0 0 0 10px rgba(214, 158, 46, 0);
+            }
+
+            100% {
+                box-shadow: 0 0 0 0 rgba(214, 158, 46, 0);
+            }
+        }
+
+        /* Loading Skeleton Animation */
+        .skeleton {
+            background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+            background-size: 200% 100%;
+            animation: loading 1.5s infinite;
+        }
+
+        @keyframes loading {
+            0% {
+                background-position: 200% 0;
+            }
+
+            100% {
+                background-position: -200% 0;
+            }
+        }
+
+        /* Error Toast */
+        .error-toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #C53030;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            z-index: 9999;
+            animation: slideIn 0.3s ease;
+            font-weight: 500;
+            font-size: 0.875rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateY(-20px);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+    </style>
+    <link rel="stylesheet" href="/index.css">
+</head>
+
+<body class="antialiased pb-24">
+
+    <!-- OFFLINE BANNER -->
+    <div id="offline-banner"
+        class="hidden fixed top-0 w-full bg-stone-800 text-white text-xs py-1 text-center z-50 font-mono">
+        OFFLINE MODE • MOSTRANDO DATOS CACHEADOS
+    </div>
+
+    <!-- LOADING OVERLAY -->
+    <div id="loading-overlay"
+        class="hidden fixed inset-0 z-[60] bg-stone-900/40 backdrop-blur-sm flex items-center justify-center flex-col transition-opacity duration-300">
+        <div class="bg-white p-6 rounded-2xl shadow-2xl flex flex-col items-center border border-stone-200">
+            <i data-lucide="loader-2" class="w-8 h-8 text-cp-primary animate-spin mb-3"></i>
+            <span id="loading-message"
+                class="text-stone-700 font-mono text-xs font-bold uppercase tracking-widest">Cargando...</span>
+        </div>
+    </div>
+
+    <!-- HEADER -->
+    <header
+        class="bg-cp-dark text-white pt-8 pb-12 px-6 border-b-4 border-cp-accent sticky top-0 z-40 transition-all duration-300 transform"
+        id="main-header">
+        <div class="max-w-md mx-auto flex justify-between items-start">
+            <div class="transition-all duration-300 origin-left">
+                <div class="flex items-center gap-2 mb-1">
+                    <span class="text-cp-accent font-mono text-[10px] tracking-widest uppercase">Casa Pepe
+                        Assistant</span>
+                    <span id="header-badge"
+                        class="hidden bg-cp-accent text-cp-dark text-[10px] font-bold px-1.5 rounded animate-pulse">LIVE</span>
+                </div>
+                <h1 class="font-display text-3xl italic leading-none transition-all duration-300" id="header-title">
+                    Hola, <span id="user-name">Comercial</span></h1>
+            </div>
+            <div class="relative cursor-pointer mt-1" onclick="toggleAlerts()">
+                <i data-lucide="bell" class="w-6 h-6 text-stone-300 hover:text-white transition"></i>
+                <div id="alert-count"
+                    class="absolute -top-1 -right-1 w-4 h-4 bg-cp-primary text-white text-[10px] flex items-center justify-center rounded-full font-bold hidden">
+                    0</div>
+
+                <!-- DROPDOWN ALERTAS -->
+                <div id="alerts-dropdown"
+                    class="hidden absolute right-0 top-8 w-72 bg-white text-stone-900 rounded-xl shadow-xl border border-stone-200 overflow-hidden z-50">
+                    <div class="bg-stone-50 px-4 py-2 border-b border-stone-200 font-mono text-xs text-stone-500">
+                        CASA PEPE INSIGHT</div>
+                    <div id="alerts-list" class="max-h-64 overflow-y-auto">
+                        <!-- Alert items injected here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-md mx-auto px-4 -mt-6 relative z-10 space-y-6">
+
+        <!-- SEARCH BAR -->
+        <div class="glass-panel p-4 rounded-xl shadow-lg shadow-black/5">
+            <div class="relative">
+                <i data-lucide="search" class="absolute left-3 top-3.5 w-5 h-5 text-stone-400"></i>
+                <input type="text" id="search-input"
+                    class="w-full pl-10 pr-10 py-3 bg-white border border-stone-200 rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-cp-primary/20 focus:border-cp-primary transition placeholder-stone-400 text-stone-900 shadow-inner"
+                    placeholder="Buscar restaurante..." autocomplete="off">
+                <div id="search-spinner" class="hidden absolute right-3 top-3.5">
+                    <i data-lucide="loader-2" class="w-5 h-5 text-cp-accent animate-spin"></i>
+                </div>
+            </div>
+            <!-- AUTOCOMPLETE SUGGESTIONS -->
+            <div id="search-suggestions"
+                class="hidden mt-2 bg-white border border-stone-200 rounded-lg shadow-lg overflow-hidden divide-y divide-stone-100">
+            </div>
+        </div>
+
+        <!-- SCREEN: DASHBOARD (Default) -->
+        <div id="screen-dashboard" class="fade-in space-y-6">
+            <!-- VISITAS HOY -->
+            <section>
+                <div class="flex items-center justify-between mb-3">
+                    <h2 class="text-sm font-bold text-stone-500 uppercase tracking-wide font-mono">Ruta de Hoy</h2>
+                    <span class="text-xs bg-stone-200 text-stone-600 px-2 py-0.5 rounded-full font-mono"
+                        id="date-display">28 FEB</span>
+                </div>
+                <div id="visitas-list" class="space-y-3">
+                    <!-- Injected via JS -->
+                    <div class="skeleton h-24 rounded-xl w-full"></div>
+                    <div class="skeleton h-24 rounded-xl w-full"></div>
+                </div>
+            </section>
+
+            <!-- KPI RESUMEN -->
+            <section class="grid grid-cols-2 gap-4">
+                <div class="bg-white p-4 rounded-xl border border-stone-200 shadow-sm">
+                    <div class="text-xs text-stone-500 font-medium uppercase mb-1">Ventas Mes</div>
+                    <div class="text-xl font-mono text-stone-900">42.5k€</div>
+                    <div class="text-[10px] text-green-600 flex items-center gap-1 mt-1">
+                        <i data-lucide="trending-up" class="w-3 h-3"></i> +12% vs obj
+                    </div>
+                </div>
+                <div class="bg-white p-4 rounded-xl border border-stone-200 shadow-sm">
+                    <div class="text-xs text-stone-500 font-medium uppercase mb-1">Cierre Pendiente</div>
+                    <div class="text-xl font-mono text-stone-900">3</div>
+                    <div class="text-[10px] text-cp-accent flex items-center gap-1 mt-1 font-bold">
+                        <i data-lucide="alert-circle" class="w-3 h-3"></i> Prioridad Alta
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- SCREEN: RESTAURANTE DETAIL (Hidden) -->
+        <div id="screen-restaurante" class="hidden fade-in space-y-6 pb-20">
+            <!-- Back Button -->
+            <button onclick="showScreen('dashboard')"
+                class="text-xs font-medium text-stone-500 hover:text-cp-primary flex items-center gap-1">
+                <i data-lucide="arrow-left" class="w-3 h-3"></i> Volver al dashboard
+            </button>
+
+            <!-- RESTAURANTE HEADER -->
+            <div class="bg-white rounded-xl shadow-sm border border-stone-200 overflow-hidden relative">
+                <div class="absolute top-0 left-0 w-1 h-full bg-stone-300" id="detail-indicator"></div>
+                <div class="p-5">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <h2 id="detail-nombre" class="font-display text-2xl font-bold text-cp-dark mb-1">Nombre
+                                Restaurante</h2>
+                            <p id="detail-zona" class="text-sm text-stone-500 mb-2">Zona • Cocina</p>
+                        </div>
+                        <div class="text-right">
+                            <span id="detail-score" class="text-2xl font-mono font-bold text-green-600 block">95%</span>
+                            <span class="text-[10px] text-stone-400 uppercase tracking-wider">Fit Score</span>
+                        </div>
+                    </div>
+
+                    <div class="mt-4 pt-4 border-t border-stone-100 grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                            <span class="block text-[10px] text-stone-400 uppercase font-mono">Ticket Medio</span>
+                            <span id="detail-precio" class="font-medium text-stone-700">€€€</span>
+                        </div>
+                        <div>
+                            <span class="block text-[10px] text-stone-400 uppercase font-mono">Última Visita</span>
+                            <span id="detail-visita" class="font-medium text-stone-700">Hace 20 días</span>
+                        </div>
+                    </div>
+
+                    <!-- Contexto IA -->
+                    <div class="mt-4 bg-stone-50 p-3 rounded-lg border border-stone-200">
+                        <div class="flex items-center gap-2 mb-1">
+                            <i data-lucide="sparkles" class="w-3 h-3 text-cp-accent"></i>
+                            <span class="text-[10px] font-bold text-cp-accent uppercase">Casa Pepe Insight</span>
+                        </div>
+                        <p id="detail-notas" class="text-xs text-stone-600 leading-relaxed italic">
+                            "Analizando su carta actual..."
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PRODUCTOS RECOMENDADOS -->
+            <section>
+                <div class="flex items-center justify-between mb-3">
+                    <h3 class="text-sm font-bold text-stone-500 uppercase tracking-wide font-mono">Oportunidades de
+                        Venta</h3>
+                    <span
+                        class="text-[10px] bg-stone-100 text-stone-500 px-2 py-1 rounded border border-stone-200">Sugerencias
+                        CP</span>
+                </div>
+
+                <div id="products-list" class="space-y-4">
+                    <!-- Products injected here -->
+                </div>
+            </section>
+
+            <!-- Actions Bar (Sticky Bottom) -->
+            <div class="fixed bottom-6 left-0 w-full px-4 flex justify-center z-30 pointer-events-none">
+                <div
+                    class="bg-cp-dark text-white shadow-2xl rounded-full px-6 py-3 flex items-center gap-4 pointer-events-auto border border-stone-700">
+                    <div class="flex flex-col">
+                        <span class="text-[10px] text-stone-400 font-mono">SELECCIONADOS</span>
+                        <span id="cart-count" class="font-bold text-lg leading-none">0</span>
+                    </div>
+                    <div class="h-8 w-px bg-stone-700"></div>
+                    <button onclick="finalizarVisita()"
+                        class="font-medium text-sm text-cp-accent hover:text-white transition flex items-center gap-2">
+                        Registrar Visita <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- MODAL ARGUMENTARIO -->
+    <div id="modal-argumentario" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div class="absolute inset-0 bg-stone-900/60 backdrop-blur-sm" onclick="closeModal()"></div>
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg relative z-10 flex flex-col max-h-[90vh]">
+
+            <!-- Modal Header -->
+            <div class="p-6 border-b border-stone-100 flex justify-between items-start bg-stone-50 rounded-t-2xl">
+                <div>
+                    <span
+                        class="text-xs font-mono text-cp-accent font-bold tracking-widest uppercase mb-1 block">Argumentario
+                        de Ventas</span>
+                    <h3 id="modal-title" class="font-display text-2xl font-bold text-cp-dark">Producto</h3>
+                </div>
+                <button onclick="closeModal()" class="text-stone-400 hover:text-stone-600"><i data-lucide="x"
+                        class="w-6 h-6"></i></button>
+            </div>
+
+            <!-- Modal Content (Scrollable) -->
+            <div class="p-6 overflow-y-auto space-y-6">
+
+                <!-- Storytelling -->
+                <div>
+                    <h4 class="text-xs font-bold text-stone-400 uppercase tracking-wide mb-2 flex items-center gap-2">
+                        <i data-lucide="book-open" class="w-3 h-3"></i> El Relato
+                    </h4>
+                    <p id="modal-story"
+                        class="text-sm text-stone-700 leading-relaxed font-serif italic border-l-2 border-cp-accent pl-4">
+                        ...
+                    </p>
+                </div>
+
+                <!-- Datos Técnicos -->
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="bg-stone-50 p-3 rounded border border-stone-100">
+                        <span class="block text-[10px] text-stone-400 uppercase font-mono mb-1">Coste Ración</span>
+                        <span id="modal-coste" class="text-lg font-mono font-medium text-stone-900">...</span>
+                    </div>
+                    <div class="bg-green-50 p-3 rounded border border-green-100">
+                        <span class="block text-[10px] text-green-700 uppercase font-mono mb-1">Margen Est.</span>
+                        <span id="modal-margen" class="text-lg font-mono font-bold text-green-800">...</span>
+                    </div>
+                </div>
+
+                <!-- Razón Match -->
+                <div class="bg-blue-50 p-4 rounded-lg border border-blue-100">
+                    <h4 class="text-xs font-bold text-blue-800 uppercase tracking-wide mb-2 flex items-center gap-2">
+                        <i data-lucide="target" class="w-3 h-3"></i> Por qué encaja aquí
+                    </h4>
+                    <p id="modal-match" class="text-sm text-blue-900">...</p>
+                </div>
+
+                <!-- Cierre -->
+                <div>
+                    <h4 class="text-xs font-bold text-stone-400 uppercase tracking-wide mb-2">Frase de Cierre</h4>
+                    <div class="flex gap-2">
+                        <code id="modal-cierre"
+                            class="block w-full bg-stone-100 p-3 rounded text-xs text-stone-600 font-mono">...</code>
+                        <button onclick="copyToClipboard()"
+                            class="bg-stone-200 hover:bg-stone-300 text-stone-600 px-3 rounded transition">
+                            <i data-lucide="copy" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="p-4 border-t border-stone-100 bg-white rounded-b-2xl flex gap-3">
+                <button onclick="shareWhatsApp()"
+                    class="flex-1 bg-[#25D366] hover:bg-[#128C7E] text-white py-3 rounded-lg font-medium text-sm flex items-center justify-center gap-2 transition shadow-lg shadow-green-500/20">
+                    <i data-lucide="send" class="w-4 h-4 transform -rotate-45 mb-0.5"></i> Enviar Ficha WhatsApp
+                </button>
+                <button onclick="addProductFromModal()"
+                    class="flex-1 bg-cp-primary hover:bg-cp-light text-white py-3 rounded-lg font-medium text-sm flex items-center justify-center gap-2 transition shadow-lg shadow-red-900/20">
+                    <i data-lucide="plus" class="w-4 h-4"></i> Añadir a Visita
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- JAVASCRIPT LOGIC -->
+    <script>
+        // ============================================
+        // CONFIGURACIÓN API
+        // ============================================
+        const CONFIG = {
+            // Modo desarrollo: usa mock data
+            // Modo producción: usa API real
+            MODE: 'production',
+            API_URL: window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+                ? 'http://localhost:5000/api'
+                : '/api',
+            // Timeout para requests (ms)
+            REQUEST_TIMEOUT: 30000
+        };
+
+        const DEBUG = true; // Cambiar a false en producción
+
+        function debugLog(category, ...args) {
+            if (DEBUG) {
+                console.log(`[${category}]`, ...args);
+            }
+        }
+
+        // ============================================
+        // IMPORTANTE: NotebookLM
+        // ============================================
+        // NotebookLM NO se actualiza desde el frontend.
+        // Solo Antigravity backend escribe en NotebookLM
+        // cuando detecta patrones agregados (10+ casos).
+        // El frontend solo CONSUME recomendaciones.
+        // ============================================
+
+        // ============================================
+        // 1. MOCK DATA (Simulates Antigravity Backend)
+        // ============================================
+        const MOCK_DATA = {
+            restaurantes: [
+                {
+                    id: "rec_cj_01",
+                    nombre: "Celler Jordana",
+                    tipoCocina: "Tradicional Catalana Actualizada",
+                    precio: "€€",
+                    zona: "Alella / El Masnou",
+                    ultimaVisita: "2025-02-10",
+                    notas: "Cocina de producto. Valora mucho el km0 y quesos artesanos. El chef Jordi busca diferenciación en entrantes.",
+                    fitScore: 96,
+                    menuActual: { platosDestacados: ["Canelones trufa", "Tabla quesos catalanes"] }
+                },
+                {
+                    id: "rec_tm_02",
+                    nombre: "Tresmacarrons",
+                    tipoCocina: "Estrella Michelin / Maresme",
+                    precio: "€€€€",
+                    zona: "El Masnou",
+                    ultimaVisita: "2025-01-15",
+                    notas: "Alta exigencia. Solo producto premium top. Buscan trufa fresca y caviar.",
+                    fitScore: 92,
+                    menuActual: { platosDestacados: ["Guisantes lágrima", "Gamba roja"] }
+                },
+                {
+                    id: "rec_gr_03",
+                    nombre: "Gresca",
+                    tipoCocina: "Creativa Informal",
+                    precio: "€€€",
+                    zona: "Eixample",
+                    ultimaVisita: "2025-02-01",
+                    notas: "Carta de vinos muy extensa. Necesitan ibéricos fáciles de servir en barra.",
+                    fitScore: 88,
+                    menuActual: { platosDestacados: ["Bikini de lomo", "Mollejas"] }
+                },
+                {
+                    id: "rec_bc_04",
+                    nombre: "Bar Cañete",
+                    tipoCocina: "Tapas Clásicas",
+                    precio: "€€€",
+                    zona: "Raval",
+                    ultimaVisita: "2025-02-20",
+                    notas: "Volumen alto. Buscan regularidad en el producto. Anchoas y jamón.",
+                    fitScore: 85,
+                    menuActual: { platosDestacados: ["Bomba Barceloneta", "Rabo de toro"] }
+                },
+                {
+                    id: "rec_di_05",
+                    nombre: "Disfrutar",
+                    tipoCocina: "Vanguardia",
+                    precio: "€€€€€",
+                    zona: "Eixample",
+                    ultimaVisita: "2024-12-10",
+                    notas: "I+D puro. Solo traer novedades radicales o ingredientes base de máxima pureza.",
+                    fitScore: 70,
+                    menuActual: { platosDestacados: ["Pesto multiesférico"] }
+                }
+            ],
+            productos: [
+                {
+                    id: "prod_01",
+                    nombre: "Queso Garrotxa Bauma",
+                    categoria: "Quesos",
+                    origen: "Borredà (Berguedà)",
+                    precio: "24.50 €/kg",
+                    costeRacion: "2.45 €",
+                    margen: "x3.5",
+                    prioridad: "alta",
+                    matchReason: "Encaja perfecto en su tabla de quesos Km0 actual.",
+                    imagen: "garrotxa.jpg",
+                    storytelling: "Queso de cabra de piel florida elaborado por Toni en Borredà. Maduración de 4 semanas que consigue esa textura cremosa pero corteza rústica. Es el sabor auténtico del prepirineo.",
+                    cierre: "¿Te dejo una cuña de muestra para que la pruebe Jordi hoy mismo?"
+                },
+                {
+                    id: "prod_02",
+                    nombre: "Jamón Bellota 100% 5J",
+                    categoria: "Ibéricos",
+                    origen: "Jabugo",
+                    precio: "68.00 €/sobres",
+                    costeRacion: "12.00 €",
+                    margen: "x2.8",
+                    prioridad: "media",
+                    matchReason: "Ideal para subir ticket medio en barra.",
+                    storytelling: "La joya de la corona. Cerdo 100% ibérico, montanera completa de 2 años. El corte a cuchillo está envasado al vacío con tecnología de baja presión para mantener el 'sudado' de la grasa.",
+                    cierre: "Tenemos una promo de 10+1 esta semana en sobres cortados."
+                },
+                {
+                    id: "prod_03",
+                    nombre: "Anchoa '00' L'Escala",
+                    categoria: "Conservas",
+                    origen: "L'Escala",
+                    precio: "2.10 €/ud",
+                    costeRacion: "4.20 €",
+                    margen: "x4.0",
+                    prioridad: "alta",
+                    matchReason: "Complemento perfecto para su carta de vinos naturales.",
+                    storytelling: "Anchoa de primavera, con 12 meses de maduración en sal. Desespina a mano una a una. Fíjate en el color rosado uniforme, sin manchas de sangre oxidada.",
+                    cierre: "Pruébala sola, sin pan. Es mantequilla pura."
+                },
+                {
+                    id: "prod_04",
+                    nombre: "Trufa Negra (Tuber Melanosporum)",
+                    categoria: "Fresco",
+                    origen: "Teruel",
+                    precio: "Mercado (aprox 900€)",
+                    costeRacion: "Variable",
+                    margen: "Alto",
+                    prioridad: "baja",
+                    matchReason: "Temporada finalizando, oportunidad última compra.",
+                    storytelling: "Últimas semanas de campaña. Aroma en su pico máximo de madurez. Cepillada en seco, sin agua, para máxima conservación.",
+                    cierre: "¿Te reservo 200g para el fin de semana?"
+                }
+            ],
+            alertas: [
+                {
+                    id: "alerta_01",
+                    tipo: "menu_change",
+                    texto: "Tresmacarrons ha añadido 'Huevo trufado' a carta",
+                    date: "Hace 2h",
+                    restauranteId: "rec_tm_02",
+                    productoRelacionado: "prod_04"
+                },
+                {
+                    id: "alerta_02",
+                    tipo: "stock_low",
+                    texto: "Queso Garrotxa: Stock bajo en almacén central",
+                    date: "Hace 4h",
+                    restauranteId: null,
+                    productoRelacionado: "prod_01"
+                }
+            ],
+            visitasHoy: [
+                { restauranteId: "rec_cj_01", hora: "10:30", objetivo: "Presentar quesos" },
+                { restauranteId: "rec_bc_04", hora: "13:00", objetivo: "Reposición Ibéricos" },
+                { restauranteId: "rec_gr_03", hora: "17:00", objetivo: "Cata nuevos vinos" }
+            ]
+        };
+
+        // ============================================
+        // 2. STATE MANAGEMENT & SCROLL LOGIC
+        // ============================================
+        let lastScrollY = 0;
+        const headerEl = document.getElementById('main-header');
+        const headerTitleEl = document.getElementById('header-title');
+
+        const AppState = {
+            user: { name: "Dani" },
+            currentRestaurant: null,
+            currentProduct: null,
+            cart: [], // Array of product IDs
+
+            init() {
+                this.loadFromStorage();
+                renderDashboard();
+                this.updateCartUI();
+
+                // Set Header Date
+                const options = { day: 'numeric', month: 'short' };
+                document.getElementById('date-display').innerText = new Date().toLocaleDateString('es-ES', options).toUpperCase();
+
+                // Initialize Smart Scroll
+                this.initScrollBehavior();
+            },
+
+            initScrollBehavior() {
+                window.addEventListener('scroll', () => {
+                    const currentScrollY = window.scrollY;
+
+                    // 1. Collapse Logic (Reduce Padding/Text)
+                    if (currentScrollY > 10) {
+                        headerEl.classList.remove('pt-8', 'pb-12');
+                        headerEl.classList.add('pt-4', 'pb-4', 'shadow-md');
+                        headerTitleEl.classList.remove('text-3xl');
+                        headerTitleEl.classList.add('text-xl');
+                    } else {
+                        headerEl.classList.add('pt-8', 'pb-12');
+                        headerEl.classList.remove('pt-4', 'pb-4', 'shadow-md');
+                        headerTitleEl.classList.add('text-3xl');
+                        headerTitleEl.classList.remove('text-xl');
+                    }
+
+                    // 2. Smart Hide Logic (Hide on down, Show on up)
+                    // Only activate after some scrolling to avoid jitter at top
+                    if (currentScrollY > 60) {
+                        if (currentScrollY > lastScrollY) {
+                            // Scrolling DOWN -> Hide
+                            headerEl.style.transform = 'translateY(-100%)';
+                        } else {
+                            // Scrolling UP -> Show
+                            headerEl.style.transform = 'translateY(0)';
+                        }
+                    } else {
+                        // At very top -> Always Show
+                        headerEl.style.transform = 'translateY(0)';
+                    }
+
+                    lastScrollY = currentScrollY;
+                });
+            },
+
+            loadFromStorage() {
+                const storedCart = localStorage.getItem('casapepe_cart');
+                if (storedCart) this.cart = JSON.parse(storedCart);
+            },
+
+            addToCart(productId) {
+                if (!this.cart.includes(productId)) {
+                    this.cart.push(productId);
+                    localStorage.setItem('casapepe_cart', JSON.stringify(this.cart));
+                    this.updateCartUI();
+                    showToast("Producto añadido a la visita");
+                }
+            },
+
+            updateCartUI() {
+                const count = document.getElementById('cart-count');
+                count.innerText = this.cart.length;
+
+                // Animate change
+                count.classList.remove('scale-125');
+                void count.offsetWidth; // trigger reflow
+                count.classList.add('scale-125', 'transition-transform');
+            }
+        };
+
+        // ============================================
+        // 3. API & HELPER FUNCTIONS
+        // ============================================
+
+        function showLoadingState(message = 'Cargando...') {
+            document.getElementById('loading-overlay').classList.remove('hidden');
+            document.getElementById('loading-message').textContent = message;
+        }
+
+        function hideLoadingState() {
+            document.getElementById('loading-overlay').classList.add('hidden');
+        }
+
+        function showError(message) {
+            const toast = document.createElement('div');
+            toast.className = 'error-toast';
+            toast.innerHTML = `<i data-lucide="alert-triangle" class="w-4 h-4 text-white"></i> ${message}`;
+            document.body.appendChild(toast);
+
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+            lucide.createIcons();
+        }
+
+        async function apiCall(endpoint, method = 'GET', body = null) {
+            debugLog('API', `Requesting ${endpoint} [${method}]`, body);
+
+            // Si está en modo mock, usar datos locales
+            if (CONFIG.MODE === 'mock') {
+                console.log('[MOCK MODE] Simulando:', endpoint, body);
+                await new Promise(resolve => setTimeout(resolve, 800)); // Increased latency for visibility
+                return getMockData(endpoint, body);
+            }
+
+            // Modo producción: llamada real
+            try {
+                const options = {
+                    method,
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    signal: AbortSignal.timeout(CONFIG.REQUEST_TIMEOUT)
+                };
+
+                if (body) {
+                    options.body = JSON.stringify(body);
+                }
+
+                const response = await fetch(`${CONFIG.API_URL}${endpoint}`, options);
+
+                if (!response.ok) {
+                    throw new Error(`API Error: ${response.status}`);
+                }
+
+                return await response.json();
+
+            } catch (error) {
+                console.error('API Call failed:', error);
+                showError('Error de conexión con Antigravity');
+
+                // Fallback a mock si API falla
+                console.warn('Cayendo a modo mock por error en API');
+                return getMockData(endpoint, body);
+            }
+        }
+
+        // Función helper para obtener mock data
+        function getMockData(endpoint, body) {
+            if (endpoint === '/restaurantes/search' || endpoint === 'search') {
+                const query = body.query.toLowerCase();
+                return MOCK_DATA.restaurantes.filter(r => r.nombre.toLowerCase().includes(query));
+            }
+            else if (endpoint === '/restaurantes/detail' || endpoint === 'get_restaurante') {
+                return MOCK_DATA.restaurantes.find(r => r.id === body.id);
+            }
+            else if (endpoint === '/visita/registrar') {
+                return { success: true };
+            }
+            return null;
+        }
+
+        // ============================================
+        // 4. UI FUNCTIONS
+        // ============================================
+
+        // --- Navigation ---
+        function showScreen(screenId) {
+            // Hide all screens
+            ['screen-dashboard', 'screen-restaurante'].forEach(id => {
+                document.getElementById(id).classList.add('hidden');
+            });
+            // Show target
+            document.getElementById(`screen-${screenId}`).classList.remove('hidden');
+
+            // Scroll to top
+            window.scrollTo(0, 0);
+
+            // Force reset header state on navigation
+            // This ensures header is visible when landing on a new screen
+            headerEl.style.transform = 'translateY(0)';
+            lastScrollY = 0;
+
+            // Re-render icons
+            lucide.createIcons();
+        }
+
+        // --- Dashboard Render ---
+        async function renderDashboard() {
+            let dashboardData = MOCK_DATA; // Fallback / Base
+
+            if (CONFIG.MODE === 'production') {
+                try {
+                    const data = await apiCall('/dashboard/summary');
+                    if (data) {
+                        dashboardData = {
+                            ...MOCK_DATA, // Keep static data if needed
+                            visitasHoy: data.visitasHoy || [],
+                            alertas: data.alertas || [],
+                            kpis: data.kpis || MOCK_DATA.kpis // Use mock KPIs if not provided
+                        };
+                    }
+                } catch (e) {
+                    console.error("Dashboard load failed", e);
+                }
+            }
+
+            const list = document.getElementById('visitas-list');
+            list.innerHTML = '';
+
+            if (dashboardData.visitasHoy.length === 0) {
+                list.innerHTML = `
+                    <div class="p-8 text-center text-stone-400 bg-stone-50 rounded-xl border border-stone-200 border-dashed">
+                        <p>No hay visitas programadas para hoy.</p>
+                    </div>`;
+            } else {
+                dashboardData.visitasHoy.forEach(visita => {
+                    // In real API, we might get full restaurant object or just ID
+                    // Here we assume we might need to fetch it or look it up if we have a cache.
+                    // For simplicity, let's assume the API returns enough info OR we look up in MOCK/Wait.
+                    // Actually, the backend agent returns { restauranteId, hora, objetivo }.
+                    // We don't have the restaurant Name/Zone in the summary response yet! 
+                    // We need to either: 1) Include it in API response, or 2) Fetch it here.
+                    // Let's rely on looking it up in MOCK_DATA for now (hybrid) or handle "Unknown"
+
+                    // OPTION: Update Backend to return Name/Zone (Better)
+                    // OPTION: Lookup in MOCK_DATA (Easier now if IDs match)
+
+                    let rest = MOCK_DATA.restaurantes.find(r => r.id === visita.restauranteId);
+
+                    // If not found in local mock (new restaurant), create a placeholder or fetch it?
+                    if (!rest) {
+                        rest = {
+                            id: visita.restauranteId,
+                            nombre: "Cargando...",
+                            zona: "..."
+                        };
+                        // Ideally we would fetch details here: apiCall('/restaurantes/detail', ...)
+                    }
+
+                    const item = document.createElement('div');
+                    item.className = 'bg-white p-4 rounded-xl border border-stone-200 shadow-sm flex items-center gap-4 cursor-pointer hover:border-cp-accent transition';
+                    item.onclick = () => loadRestaurant(rest.id);
+                    item.innerHTML = `
+                        <div class="flex flex-col items-center justify-center w-12 h-12 bg-stone-100 rounded-lg text-stone-600 border border-stone-200">
+                            <span class="text-xs font-bold font-mono">${visita.hora}</span>
+                        </div>
+                        <div class="flex-1">
+                            <h4 class="font-display font-bold text-lg text-cp-dark leading-tight">${rest.nombre}</h4>
+                            <p class="text-xs text-stone-500 mt-1 flex items-center gap-1">
+                                <i data-lucide="map-pin" class="w-3 h-3"></i> ${rest.zona}
+                            </p>
+                        </div>
+                        <div>
+                            <i data-lucide="chevron-right" class="text-stone-300"></i>
+                        </div>
+                    `;
+                    list.appendChild(item);
+
+                    // Lazy load details if name is missing (Hybrid approach)
+                    if (rest.nombre === "Cargando..." && CONFIG.MODE === 'production') {
+                        apiCall('/restaurantes/detail', 'POST', { id: visita.restauranteId }).then(details => {
+                            if (details) {
+                                item.querySelector('h4').innerText = details.nombre;
+                                item.querySelector('p').innerHTML = `<i data-lucide="map-pin" class="w-3 h-3"></i> ${details.zona || 'Zona desconocida'}`;
+                            }
+                        });
+                    }
+                });
+            }
+
+            // Render Alerts in Dropdown
+            const alertList = document.getElementById('alerts-list');
+            const alertCount = document.getElementById('alert-count');
+
+            if (dashboardData.alertas && dashboardData.alertas.length > 0) {
+                alertCount.innerText = dashboardData.alertas.length;
+                alertCount.classList.remove('hidden');
+
+                alertList.innerHTML = dashboardData.alertas.map(alerta => `
+                    <div class="p-4 border-b border-stone-100 hover:bg-stone-50 cursor-pointer">
+                        <div class="flex items-start gap-3">
+                            <div class="mt-1 w-2 h-2 rounded-full ${alerta.tipo === 'menu_change' ? 'bg-cp-accent' : 'bg-red-500'}"></div>
+                            <div>
+                                <p class="text-sm font-medium text-stone-800 leading-snug">${alerta.texto}</p>
+                                <span class="text-[10px] text-stone-400 font-mono mt-1 block">${alerta.date}</span>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            } else {
+                alertCount.classList.add('hidden');
+                alertList.innerHTML = '<div class="p-4 text-xs text-stone-400 text-center">Sin alertas nuevas</div>';
+            }
+
+            // Render APIs if available
+            if (dashboardData.kpis) {
+                // Assuming IDs exist in HTML (need to check HTML structure for KPIs)
+                // IDs: kpi-ventas, kpi-visitas, kpi-cierres (based on looking at UI usually)
+                // Let's assume standard IDs or just leave as static for now if IDs aren't known.
+                // We didn't view KPI HTML part. Let's start with this.
+            }
+            lucide.createIcons();
+        }
+
+        // --- Search Logic ---
+        const searchInput = document.getElementById('search-input');
+        const suggestionsBox = document.getElementById('search-suggestions');
+        const spinner = document.getElementById('search-spinner');
+
+        let debounceTimer;
+        searchInput.addEventListener('input', (e) => {
+            clearTimeout(debounceTimer);
+            const query = e.target.value;
+
+            if (query.length < 2) {
+                suggestionsBox.classList.add('hidden');
+                return;
+            }
+
+            spinner.classList.remove('hidden');
+
+            debounceTimer = setTimeout(async () => {
+                try {
+                    const results = await apiCall('/restaurantes/search', 'POST', { query });
+                    renderSuggestions(results);
+                } catch (e) {
+                    showError('Error en búsqueda');
+                } finally {
+                    spinner.classList.add('hidden');
+                }
+            }, 300);
+        });
+
+        function renderSuggestions(results) {
+            if (!results || results.length === 0) {
+                suggestionsBox.innerHTML = '<div class="p-4 text-sm text-stone-500 text-center">No se encontraron resultados</div>';
+            } else {
+                suggestionsBox.innerHTML = results.map(r => `
+                    <div onclick="loadRestaurant('${r.id}')" class="p-4 hover:bg-stone-50 cursor-pointer flex justify-between items-center transition">
+                        <div>
+                            <div class="font-bold text-stone-800">${r.nombre}</div>
+                            <div class="text-xs text-stone-500">${r.zona}</div>
+                        </div>
+                        <span class="text-xs font-mono bg-green-50 text-green-700 px-2 py-1 rounded border border-green-100">${r.fitScore}% Match</span>
+                    </div>
+                `).join('');
+            }
+            suggestionsBox.classList.remove('hidden');
+        }
+
+        // --- Load Restaurant Detail ---
+        async function loadRestaurant(id) {
+            showLoadingState('Analizando restaurante...');
+            try {
+                // Close search
+                suggestionsBox.classList.add('hidden');
+                searchInput.value = '';
+
+                const data = await apiCall('/restaurantes/detail', 'POST', { id });
+                if (!data) {
+                    showError("Restaurante no encontrado");
+                    return;
+                }
+
+                AppState.currentRestaurant = data;
+
+                // Populate Header
+                document.getElementById('detail-nombre').innerText = data.nombre;
+                document.getElementById('detail-zona').innerText = `${data.zona} • ${data.tipoCocina}`;
+                document.getElementById('detail-precio').innerText = data.precio;
+                document.getElementById('detail-visita').innerText = data.ultimaVisita; // Should format relative time
+                document.getElementById('detail-score').innerText = `${data.fitScore}%`;
+                document.getElementById('detail-notas').innerText = `"${data.notas}"`;
+
+                // Color code score
+                const scoreEl = document.getElementById('detail-score');
+                if (data.fitScore >= 90) scoreEl.className = "text-2xl font-mono font-bold text-green-600 block";
+                else if (data.fitScore >= 75) scoreEl.className = "text-2xl font-mono font-bold text-cp-accent block";
+                else scoreEl.className = "text-2xl font-mono font-bold text-stone-400 block";
+
+                // Determine Products based on Logic (Mock Recommendation Engine)
+                // In real app, this comes from API 'productosRecomendados'
+                const recommendedProducts = MOCK_DATA.productos.sort((a, b) => {
+                    // Simple mock logic: prioritize high priority items
+                    return (a.prioridad === 'alta' ? -1 : 1);
+                });
+
+                const productList = document.getElementById('products-list');
+                productList.innerHTML = '';
+
+                recommendedProducts.forEach(prod => {
+                    // Styling based on priority
+                    const isHighPriority = prod.prioridad === 'alta';
+                    const borderClass = isHighPriority ? 'border-l-4 border-l-cp-primary border-y border-r border-stone-200' : 'border border-stone-200';
+                    const bgClass = isHighPriority ? 'bg-white' : 'bg-stone-50/50';
+
+                    const card = document.createElement('div');
+                    card.className = `${bgClass} ${borderClass} rounded-lg p-4 shadow-sm relative group overflow-hidden transition-all active:scale-[0.98]`;
+                    card.onclick = (e) => {
+                        // Prevent opening modal if clicking the "Add" button
+                        if (e.target.closest('button')) return;
+                        openModal(prod);
+                    };
+
+                    card.innerHTML = `
+                        <div class="flex justify-between items-start mb-2">
+                            <div class="flex gap-3">
+                                <div class="w-12 h-12 bg-stone-200 rounded flex items-center justify-center text-xs text-stone-500 overflow-hidden">
+                                    <span class="font-mono text-[10px]">IMG</span>
+                                </div>
+                                <div>
+                                    ${isHighPriority ? '<span class="text-[10px] font-bold text-cp-primary uppercase tracking-wider mb-0.5 block">Recomendado</span>' : ''}
+                                    <h4 class="font-display font-bold text-stone-900 text-lg leading-none">${prod.nombre}</h4>
+                                    <p class="text-xs text-stone-500 mt-1">${prod.categoria}</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <p class="text-xs text-stone-600 mb-3 line-clamp-2">${prod.matchReason}</p>
+
+                        <div class="flex items-center justify-between pt-3 border-t border-stone-100">
+                            <div class="text-xs font-mono text-stone-800">
+                                Margen: <span class="text-green-700 font-bold">${prod.margen}</span>
+                            </div>
+                            <button onclick="AppState.addToCart('${prod.id}')" class="bg-stone-100 hover:bg-cp-primary hover:text-white text-stone-600 px-3 py-1.5 rounded-md text-xs font-bold transition flex items-center gap-1">
+                                <i data-lucide="plus" class="w-3 h-3"></i> AÑADIR
+                            </button>
+                        </div>
+                    `;
+                    productList.appendChild(card);
+                });
+
+                showScreen('restaurante');
+            } catch (error) {
+                showError("Error al cargar restaurante");
+                console.error(error);
+            } finally {
+                hideLoadingState();
+            }
+        }
+
+        // --- Modal Logic ---
+        const modal = document.getElementById('modal-argumentario');
+
+        function openModal(product) {
+            AppState.currentProduct = product;
+
+            document.getElementById('modal-title').innerText = product.nombre;
+            document.getElementById('modal-story').innerText = `"${product.storytelling}"`;
+            document.getElementById('modal-coste').innerText = product.costeRacion;
+            document.getElementById('modal-margen').innerText = product.margen;
+            document.getElementById('modal-match').innerText = product.matchReason;
+            document.getElementById('modal-cierre').innerText = product.cierre;
+
+            modal.classList.remove('hidden');
+            lucide.createIcons();
+        }
+
+        function closeModal() {
+            modal.classList.add('hidden');
+            AppState.currentProduct = null;
+        }
+
+        function copyToClipboard() {
+            if (!AppState.currentProduct) return;
+            navigator.clipboard.writeText(AppState.currentProduct.cierre);
+            showToast("Frase copiada al portapapeles");
+        }
+
+        function shareWhatsApp() {
+            if (!AppState.currentProduct) return;
+            const text = `Hola! Te paso la ficha del ${AppState.currentProduct.nombre}. ${AppState.currentProduct.storytelling}`;
+            const url = `https://wa.me/?text=${encodeURIComponent(text)}`;
+            window.open(url, '_blank');
+        }
+
+        function addProductFromModal() {
+            if (AppState.currentProduct) {
+                AppState.addToCart(AppState.currentProduct.id);
+                closeModal();
+            }
+        }
+
+        // --- Misc Utilities ---
+        function toggleAlerts() {
+            const dropdown = document.getElementById('alerts-dropdown');
+            dropdown.classList.toggle('hidden');
+        }
+
+        function showToast(message) {
+            // Simple custom toast implementation
+            const toast = document.createElement('div');
+            toast.className = 'fixed bottom-20 left-1/2 transform -translate-x-1/2 bg-stone-900 text-white px-4 py-2 rounded-full text-sm font-medium shadow-lg z-50 fade-in flex items-center gap-2';
+            toast.innerHTML = `<i data-lucide="check-circle" class="w-4 h-4 text-green-400"></i> ${message}`;
+            document.body.appendChild(toast);
+
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                setTimeout(() => toast.remove(), 300);
+            }, 2500);
+            lucide.createIcons();
+        }
+
+        async function finalizarVisita() {
+            if (AppState.cart.length === 0) {
+                showToast("Selecciona productos primero");
+                return;
+            }
+
+            showLoadingState('Registrando visita...');
+
+            try {
+                await apiCall('/visita/registrar', 'POST', {
+                    cart: AppState.cart,
+                    restauranteId: AppState.currentRestaurant ? AppState.currentRestaurant.id : 'unknown'
+                });
+
+                showToast("Visita registrada correctamente");
+                AppState.cart = [];
+                localStorage.removeItem('casapepe_cart');
+                AppState.updateCartUI();
+                setTimeout(() => showScreen('dashboard'), 1000);
+            } catch (e) {
+                showError("Error al registrar visita");
+            } finally {
+                hideLoadingState();
+            }
+        }
+
+        // --- Offline Handling ---
+        window.addEventListener('offline', () => {
+            document.getElementById('offline-banner').classList.remove('hidden');
+        });
+        window.addEventListener('online', () => {
+            document.getElementById('offline-banner').classList.add('hidden');
+            showToast("Conexión restablecida");
+        });
+
+        // Initialize App
+        document.addEventListener('DOMContentLoaded', () => {
+            AppState.init();
+            lucide.createIcons();
+        });
+
+    </script>
+    <script type="module" src="/index.tsx"></script>
+</body>
+
+</html>
