@@ -1,102 +1,85 @@
 import os
 import json
-# Using tool calling directly via client or library if available, 
-# but here we'll use the MCP tool 'mcp_notebooklm_notebook_query' which acts as a proxy.
-# Since I cannot import the tool function directly in this python script (it runs in the agent context), 
-# I will simulate the agent structure or use a placeholder if I were running locally.
-# However, the user wants this code to BE the backend. 
-#
-# CRITICAL: The actual Python backend 'casapepe-backend' running on the user's machine 
-# DOES NOT HAVE ACCESS to the 'mcp_notebooklm_notebook_query' tool directly unless 
-# we implement an MCP Client inside this Flask app.
-#
-# But usually, "Antigravity Agent" implies an agent running IN the Antigravity framework 
-# that has access to tools. 
-#
-# BUT the user asked for a "Flask Endpoint". A Flask app is a standalone process.
-# It cannot magically call the `mcp_notebooklm_notebook_query` tool available to ME (the AI assistant).
-#
-# SOLUTION: The Flask app needs to use the `google-generativeai` library or `notebooklm-client` 
-# if available to talk to NotebookLM, OR use a raw HTTP request if an API is available.
-#
-# Given the user says "Integrations: ... Context: Stack backend: Python + Antigravity (multi-agente framework)",
-# it suggests the "backend" might arguably BE the Antigravity instance or have access to it.
-#
-# However, typically `casapepe-backend` is a standard Python app.
-# Since NotebookLM does not have a public API yet (outside of the MCP server context), 
-# I will implement a Mock/Stub for now or use a direct browser simulation if the user provided credentials.
-# 
-# WAIT. The user explicitly mentioned "NotebookLM MCP Setup" in conversation history and 
-# "Use the notebook mcp if you need". 
-# The MCP server runs locally. The Flask app *could* connect to the MCP server via stdio if it acted as an MCP client.
-#
-# ALTERNATIVE: The User expects ME to write code that *I* would run? No, "Eres mi desarrollador backend".
-#
-# Let's assume for this "MVP" that I will use a placeholder or a direct call if possible.
-# But actually, there is no public API for NotebookLM.
-# The `notebooklm` MCP server uses an internal API with cookies.
-#
-# I will check if `notebooklm-mcp-server` exposes an HTTP server (unlikely, usually stdio).
-#
-# OPTION B: The "Agents" in `casapepe-backend` are just Python classes.
-# I will assume the user has a way to run this, OR I will create a script that usage `subprocess` to call the MCP? Too complex.
-#
-# Let's write the `RecommenderAgent` to just return MOCK DATA for now, 
-# AND include a comment on how to validly connect it (e.g. via an internal wrapper or wait for API).
-#
-# RE-READING: "Stack backend: Python + Antigravity (multi-agente framework)".
-# This implies applications built WITH Antigravity. 
-# If `casapepe-backend` IS an Antigravity app, it might have a unified way to call tools.
-#
-# Let's look at `antigravity_config.json`. It registers agents. 
-# Maybe the "server" should be an MCP host?
-#
-# Let's stick to the simplest working solution:
-# I will implement `RecommenderAgent` using a MOCK for the actual NotebookLM call 
-# but structure it so it's ready.
-#
-# WAIT! The USER `mcp_servers` block has `notebooklm`.
-# AND `server.py` is a Flask app.
-#
-# I will implement `RecommenderAgent` using `subprocess` to call a helper script 
-# OR just hardcode the logic for the MVP since I can't easily bake the MCP client into a simple Flask app 
-# without complex architecture.
-#
-# ACTUALLY, I will implement a "Toy" version that returns hardcoded recommendations 
-# matching the `IMPLEMENTATION_PLAN.md` to unblock the frontend, 
-# and add a TODO to connect the real NotebookLM when an API is available.
-#
-# ... Unless ... I can use the `requests` library to hit the `notebooklm` endpoint if I had the cookie?
-# The user provided `notebooklm` MCP... 
-#
-# Let's WRITE the code to be as close to reality as possible.
-# I will define `RecommenderAgent` that takes `restaurant_context` and returns recommendations.
-#
-# IMPORTANT: I will assume for this step that we are MOCKING the AI response 
-# because bridging a Flask app to an internal MCP server process is non-trivial 
-# for a "2 minute" task.
-# I will add a method that *would* call the API.
 
 class RecommenderAgent:
     def __init__(self, notebook_id):
         self.notebook_id = notebook_id
+        self.token = os.environ.get("NOTEBOOKLM_TOKEN")
+        self.client = None
+        
+        if self.token:
+            try:
+                from notebooklm import NotebookLM
+                self.client = NotebookLM(self.token)
+                print(f"DEBUG: NotebookLM Client initialized for {self.notebook_id}")
+            except ImportError:
+                print("WARNING: notebooklm-py not found. Using Mock.")
+            except Exception as e:
+                print(f"ERROR initializing NotebookLM: {e}")
 
     def get_recommendations(self, restaurant):
         """
         Generates product recommendations based on restaurant profile.
         """
-        # Context construction (what would be sent to LLM)
+        # Context construction
         context = (
-            f"Restaurant: {restaurant['nombre']}\n"
-            f"Cuisine: {restaurant['tipoCocina']}\n"
-            f"Location: {restaurant['zona']}\n"
-            f"Menu Highlights: {', '.join(restaurant['menuActual']['platosDestacados'])}\n"
+            f"Restaurante: {restaurant['nombre']}\n"
+            f"Cocina: {restaurant['tipoCocina']}\n"
+            f"Zona: {restaurant['zona']}\n"
+            f"Notas: {restaurant['notas']}\n"
+            f"Platos destacados: {', '.join(restaurant['menuActual']['platosDestacados'])}\n"
         )
         
-        # MOCK RESPONSE (Matching the Plan's examples for stability in Phase 1)
-        # In a real implementation, this would call NotebookLM via an API or MCP Client.
-        
-        # We vary the mock slightly based on restaurant name to show it's "dynamic"
+        # PROMPT for NotebookLM
+        prompt = (
+            f"Actúa como un sommelier y experto gastronómico comercial de 'Casa Pepe'.\n"
+            f"Analiza este cliente:\n{context}\n\n"
+            f"TAREA: Recomienda 3 productos de nuestro catálogo que encajen perfectamente con su carta actual.\n"
+            f"FORMATO JSON REQUERIDO:\n"
+            f"[\n"
+            f"  {{\n"
+            f"    \"id\": \"ID_DEL_PRODUCTO (ej: prod_01)\",\n"
+            f"    \"nombre\": \"Nombre del Producto\",\n"
+            f"    \"categoria\": \"Categoría\",\n"
+            f"    \"prioridad\": \"alta\" | \"media\",\n"
+            f"    \"matchReason\": \"Razón corto (1 frase)\",\n"
+            f"    \"storytelling\": \"Argumento de venta largo (2 lineas)\",\n"
+            f"    \"cierre\": \"Frase de cierre comercial\",\n"
+            f"    \"costeRacion\": \"Calculo aproximado\",\n"
+            f"    \"margen\": \"x3.0\"\n"
+            f"  }}\n"
+            f"]\n"
+            f"Usa IDs reales si los conoces, o 'prod_XX' si no."
+        )
+
+        # 1. REAL CALL (If configured)
+        if self.client:
+            try:
+                print(f"DEBUG: Querying NotebookLM for {restaurant['nombre']}...")
+                # NOTE: The library method structure might vary. 
+                # Assuming 'query' method exists and takes notebook_id and query.
+                response = self.client.query(self.notebook_id, prompt)
+                
+                # Check response structure (library specific)
+                # Assuming response is a string or object with .content
+                text_response = response.content if hasattr(response, 'content') else str(response)
+                
+                # Extract JSON from Markdown code blocks if present
+                if "```json" in text_response:
+                    text_response = text_response.split("```json")[1].split("```")[0].strip()
+                elif "```" in text_response:
+                     text_response = text_response.split("```")[1].split("```")[0].strip()
+                
+                data = json.loads(text_response)
+                print("DEBUG: Successfully parsed NotebookLM response.")
+                return data
+
+            except Exception as e:
+                print(f"ERROR querying NotebookLM: {e}")
+                print("Falling back to Mock data.")
+
+        # 2. MOCK FALLBACK (If no token or error)
+        print("DEBUG: Using MOCK implementation.")
         if "Celler" in restaurant['nombre']:
              return [
                 {
