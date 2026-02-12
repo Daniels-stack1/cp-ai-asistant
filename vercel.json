@@ -1,15 +1,5 @@
 {
     "version": 2,
-    "builds": [
-        {
-            "src": "casapepe-backend/index.py",
-            "use": "@vercel/python"
-        },
-        {
-            "src": "cp-asistant/**",
-            "use": "@vercel/static"
-        }
-    ],
     "routes": [
         {
             "src": "/api/(.*)",
