@@ -10,6 +10,39 @@ NOTEBOOK_ID = "5501f8ff-0b76-4ffe-aa12-85a2618565c0"
 def api_root():
     return jsonify({"message": "Casa Pepe AI Backend Running", "version": "1.0"}), 200
 
+@api_blueprint.route('/debug/connection', methods=['GET'])
+def debug_connection():
+    import os
+    from pyairtable import Api
+    
+    api_key = os.environ.get("AIRTABLE_API_KEY")
+    base_id = os.environ.get("AIRTABLE_BASE_ID")
+    
+    status = {
+        "AIRTABLE_API_KEY_PRESENT": bool(api_key),
+        "AIRTABLE_BASE_ID_PRESENT": bool(base_id),
+        "AIRTABLE_API_KEY_PREFIX": api_key[:4] + "***" if api_key else None,
+        "AIRTABLE_BASE_ID": base_id if base_id else None,
+        "CONNECTION_TEST": "PENDING"
+    }
+    
+    if not api_key or not base_id:
+        status["CONNECTION_TEST"] = "SKIPPED_MISSING_VARS"
+        return jsonify(status), 500
+
+    try:
+        api = Api(api_key)
+        # Try to fetch 1 record from 'Restaurantes' to verify
+        table = api.table(base_id, "Restaurantes")
+        records = table.all(max_records=1)
+        status["CONNECTION_TEST"] = "SUCCESS"
+        status["Can Read Records"] = True
+        status["Record Count Sample"] = len(records)
+        return jsonify(status), 200
+    except Exception as e:
+        status["CONNECTION_TEST"] = f"FAILED: {str(e)}"
+        return jsonify(status), 500
+
 @api_blueprint.route('/restaurantes/search', methods=['POST'])
 def search_restaurantes():
     data = request.get_json()
